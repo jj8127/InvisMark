@@ -112,26 +112,10 @@ init_model_path = MODEL_PATH + 'your_pretrained_model.pt'
 ---
 
 ## 6. QAT 학습 실행
-
-1. 기본 QAT 학습
-
-   ```bash
-   python train_QAT.py \
-       --train_dir $TRAIN_PATH \
-       --val_dir   $VAL_PATH   \
-       --save_dir  $MODEL_PATH \
-       --init_model $init_model_path
-   ```
-
-2. Low-frequency 강조 QAT 학습
+1. 학습
 
    ```bash
-   python train_QAT_Lfreq.py \
-       --train_dir $TRAIN_PATH \
-       --val_dir   $VAL_PATH   \
-       --save_dir  $MODEL_PATH \
-       --init_model $init_model_path \
-       --wavelet-level 2
+   !python train_QAT_Lfreq.py
    ```
 
 > 각 옵션에 대한 설명은 스크립트 상단의 `--help`를 통해 확인할 수 있습니다.
