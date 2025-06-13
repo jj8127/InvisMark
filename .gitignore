@@ -1,0 +1,72 @@
+# Python C extensions and bytecode
+*.pyc
+*.so
+__pycache__/
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
+.env
+.venv
+env/
+venv/
+ENV/
+VENV/
+
+# Jupyter/Colab Notebook Checkpoints
+.ipynb_checkpoints/
+
+# ----------------------------------------------------------------
+# InvisMark 프로젝트 맞춤 설정
+# ----------------------------------------------------------------
+
+# 1. 데이터셋 (매우 큰 파일 및 폴더)
+# ZIP 압축 파일과 압축 해제된 데이터 폴더를 모두 제외
+DIV2K_train_HR.zip
+DIV2K_valid_HR.zip
+DIV2K_train_HR/
+DIV2K_valid_HR/
+# 다른 데이터셋을 추가할 경우를 대비
+data/
+datasets/
+
+# 2. 훈련된 모델 및 체크포인트
+# 모델이 저장되는 폴더 전체를 제외
+model/
+# 또는 특정 확장자만 제외
+*.pt
+*.pth
+
+# 3. 결과물 및 로그
+# 실행 결과로 생성되는 이미지 폴더 제외
+image/
+# 원본 프로젝트의 텍스트 로그 폴더 제외
+logging/
+# TensorBoard 로그 폴더 (보통 'runs' 이름으로 생성됨) 제외
+runs/
+log/
+
+# ----------------------------------------------------------------
+# IDE 및 운영체제 시스템 파일
+# ----------------------------------------------------------------
+.idea/
+.vscode/
+*.DS_Store
+Thumbs.db
