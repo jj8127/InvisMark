@@ -1,30 +1,30 @@
-import torch
+import torch.optim
 import torch.nn as nn
+import config as c
 from hinet import Hinet
-from collections import OrderedDict
+
 
 class Model(nn.Module):
-    def __init__(self, init_model_path=None):
+    def __init__(self):
         super(Model, self).__init__()
-        self.quant = torch.quantization.QuantStub()
-        self.hinet = Hinet()
-        self.dequant = torch.quantization.DeQuantStub()
 
-        if init_model_path:
-            checkpoint = torch.load(init_model_path)
-            state_dict = checkpoint['net']
-            
-            new_state_dict = OrderedDict()
-            
-            for k, v in state_dict.items():
-                name = k[13:] 
-                new_state_dict[name] = v
-            
-            self.hinet.load_state_dict(new_state_dict)
+        self.model = Hinet()
 
-    # 'def forward'는 __init__과 같은 레벨이므로, 앞에는 4칸(또는 1탭) 들여쓰기가 있어야 합니다.
     def forward(self, x, rev=False):
-        x = self.quant(x)
-        x = self.hinet(x, rev)
-        x = self.dequant(x)
-        return x
+
+        if not rev:
+            out = self.model(x)
+
+        else:
+            out = self.model(x, rev=True)
+
+        return out
+
+
+def init_model(mod):
+    for key, param in mod.named_parameters():
+        split = key.split('.')
+        if param.requires_grad:
+            param.data = c.init_scale * torch.randn(param.data.shape).cuda()
+            if split[-2] == 'conv5':
+                param.data.fill_(0.)
