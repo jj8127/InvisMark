@@ -31,8 +31,8 @@ val_freq = 50
 
 
 # Dataset
-TRAIN_PATH = '/content/drive/MyDrive/Colab/HiNet_all/DIV2K_train_HR/DIV2K_train_HR/'
-VAL_PATH = '/content/drive/MyDrive/Colab/HiNet_all/DIV2K_valid_HR/DIV2K_valid_HR/'
+TRAIN_PATH = '/content/drive/MyDrive/Colab/HiNet_all/HiNet_all/DIV2K_train_HR/DIV2K_train_HR/'
+VAL_PATH = '/content/drive/MyDrive/Colab/HiNet_all/HiNet_all/DIV2K_valid_HR/DIV2K_valid_HR/'
 format_train = 'png'
 format_val = 'png'
 
@@ -46,12 +46,12 @@ progress_bar = False
 
 # Saving checkpoints:
 
-MODEL_PATH = '/content/drive/MyDrive/Colab/HiNet_all/HiNet/model/'
+MODEL_PATH = '/content/drive/MyDrive/Colab/HiNet_all/HiNet_all/HiNet/model/'
 checkpoint_on_error = True
 SAVE_freq = 50
 
 
-IMAGE_PATH = '/content/drive/MyDrive/Colab/HiNet_all/HiNet/image/'
+IMAGE_PATH = '/content/drive/MyDrive/Colab/HiNet_all/HiNet_all/HiNet/image/'
 IMAGE_PATH_cover = IMAGE_PATH + 'cover/'
 IMAGE_PATH_secret = IMAGE_PATH + 'secret/'
 IMAGE_PATH_steg = IMAGE_PATH + 'steg/'
