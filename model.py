@@ -1,3 +1,4 @@
+import torch
 import torch.optim
 import torch.nn as nn
 import config as c
