@@ -45,7 +45,7 @@ progress_bar = False
 
 
 # Saving checkpoints:
-
+#             /content/drive/MyDrive/Colab/HiNet_all/HiNet_all/HiNet/model
 MODEL_PATH = '/content/drive/MyDrive/Colab/HiNet_all/HiNet_all/HiNet/model/'
 checkpoint_on_error = True
 SAVE_freq = 50
@@ -58,7 +58,7 @@ IMAGE_PATH_steg = IMAGE_PATH + 'steg/'
 IMAGE_PATH_secret_rev = IMAGE_PATH + 'secret-rev/'
 
 # Load:
-suffix = 'model.pt'
+suffix = 'hinet_qat_quantized.pt'
 init_model_path = MODEL_PATH + suffix
 tain_next = False
 trained_epoch = 0
