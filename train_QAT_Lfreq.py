@@ -79,8 +79,19 @@ def main_qat():
     )
     loss_fn = nn.L1Loss().to(device)
 
+    # ===== 코드 수정 부분 시작 =====
     # TensorBoardX writer 초기화
-    writer = SummaryWriter(comment='hinet_qat', filename_suffix='QAT_Lfreq')
+    # 스크립트가 위치한 디렉토리를 기준으로 'runs' 폴더 경로를 설정합니다.
+    try:
+        # __file__은 현재 스크립트 파일의 경로를 나타냅니다.
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+    except NameError:
+        # Colab/Jupyter 같은 환경에서는 __file__이 정의되지 않으므로 현재 작업 디렉토리를 사용합니다.
+        script_dir = os.getcwd()
+    
+    log_dir_base = os.path.join(script_dir, 'runs')
+    writer = SummaryWriter(logdir=log_dir_base, comment='hinet_qat_Lfreq')
+    # ===== 코드 수정 부분 끝 =====
 
     # QAT 미세조정
     print("Starting QAT fine-tuning...")
