@@ -1,8 +1,7 @@
-# test_quantized.py (Final Corrected Version)
+# test_QAT.py (최종 버전)
 
 import torch
 import torch.nn as nn
-# 양자화를 위해 임포트
 import torch.quantization
 from torchvision.utils import save_image
 from torch.utils.data import DataLoader
@@ -11,20 +10,18 @@ import torchvision.transforms as T
 import os
 from tqdm import tqdm
 import numpy as np
+from collections import OrderedDict
 
 import config as c
-# 수정된 model_QAT.py 와 datasets.py 를 사용
 from model_QAT import Model
 from datasets import Hinet_Dataset
 from modules.Unet_common import DWT, IWT
 
 
 def main_test_quantized():
-    # 추론 환경이므로 CPU 사용을 권장 (엣지 디바이스 환경 시뮬레이션)
     device = torch.device("cpu")
     print(f"Using device: {device}")
 
-    # 데이터 로더 (기존 test.py와 유사)
     transform = T.Compose([
         T.CenterCrop(c.cropsize_val),
         T.ToTensor(),
@@ -35,45 +32,45 @@ def main_test_quantized():
         batch_size=c.batchsize_val,
         shuffle=False,
         pin_memory=True,
-        num_workers=0, # Colab에서는 0으로 설정
+        num_workers=0,
         drop_last=False
     )
 
-    # =================================================================
-    # [핵심 수정] 양자화된 모델을 불러오는 로직
-    # =================================================================
     print("Loading Quantized Model for Testing...")
     
-    # 1. 모델 객체를 생성 (QuantStub/DeQuantStub이 포함된 버전)
     net = Model()
-
-    # 2. qconfig 설정 및 prepare_qat (구조를 맞춰주기 위해 필요)
-    #    CPU 추론을 위한 'qnnpack' 백엔드 사용
     net.qconfig = torch.quantization.get_default_qconfig('qnnpack')
     
-    # [수정] prepare_qat를 호출하기 전에 반드시 모델을 훈련 모드로 설정합니다.
     net.train()
     torch.quantization.prepare_qat(net, inplace=True)
 
-    # 3. convert를 통해 최종 INT8 모델 구조로 변환
-    #    이 단계까지는 파라미터가 비어있는 INT8 모델의 '틀'만 생성된 상태
     net_int8 = torch.quantization.convert(net)
     print("INT8 model structure created.")
 
-    # 4. 저장된 양자화 모델의 state_dict를 불러옴
-    #    config.py의 init_model_path가 'hinet_qat_quantized.pt'를 가리켜야 함
     print(f"Loading weights from: {c.init_model_path}")
-    # CPU에서 모델을 불러옵니다.
     state_dict = torch.load(c.init_model_path, map_location='cpu')
-    net_int8.load_state_dict(state_dict)
     
-    # 추론을 위해 최종적으로 eval() 모드로 설정
+    # 모든 종류의 접두사를 처리하는 로직
+    new_state_dict = OrderedDict()
+    for k, v in state_dict.items():
+        if k.startswith('module.model.'):
+            name = k[13:]
+        elif k.startswith('model.'):
+            name = k[6:]
+        elif k.startswith('module.'):
+            name = k[7:]
+        else:
+            name = k
+        new_state_dict[name] = v
+    
+    # ===== 코드 수정 시작: strict=False 옵션 추가 =====
+    # 예상치 못한 키는 무시하고, 필요한 키만 불러옵니다.
+    net_int8.load_state_dict(new_state_dict, strict=False)
+    # ===== 코드 수정 끝 =====
+    
     net_int8.eval()
     net_int8.to(device)
 
-    # =================================================================
-    # 테스트 루프
-    # =================================================================
     dwt = DWT().to(device)
     iwt = IWT().to(device)
     
@@ -82,24 +79,19 @@ def main_test_quantized():
         secret = data['secret_image'].to(device)
         
         with torch.no_grad():
-            # Forward pass
             cover_dwt = dwt(cover)
             secret_dwt = dwt(secret)
             input_dwt = torch.cat((cover_dwt, secret_dwt), 1)
             
-            # net_int8 모델을 사용
             output_dwt = net_int8(input_dwt)
             
-            # Reverse pass
             output_steg_dwt = output_dwt[:, :12, :, :]
             rev_output = net_int8(output_dwt, rev=True)
             output_secret_dwt = rev_output[:, 12:, :, :]
             
-            # 결과 이미지 변환
             steg_img = iwt(output_steg_dwt)
             secret_rev = iwt(output_secret_dwt)
             
-            # 결과 저장
             if not os.path.exists(c.IMAGE_PATH_steg):
                 os.makedirs(c.IMAGE_PATH_steg)
             if not os.path.exists(c.IMAGE_PATH_secret_rev):
