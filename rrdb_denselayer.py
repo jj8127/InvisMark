@@ -12,7 +12,11 @@ class ResidualDenseBlock_out(nn.Module):
         self.conv3 = nn.Conv2d(input + 2 * 32, 32, 3, 1, 1, bias=bias)
         self.conv4 = nn.Conv2d(input + 3 * 32, 32, 3, 1, 1, bias=bias)
         self.conv5 = nn.Conv2d(input + 4 * 32, output, 3, 1, 1, bias=bias)
-        self.lrelu = nn.LeakyReLU(inplace=True)
+        
+        # ===== 코드 수정: inplace=True를 False로 변경 =====
+        self.lrelu = nn.LeakyReLU(inplace=False)
+        # ===== 코드 수정 끝 =====
+
         # initialization
         mutil.initialize_weights([self.conv5], 0.)
 
