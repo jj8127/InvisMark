@@ -7,23 +7,25 @@ class Hinet(nn.Module):
     def __init__(self):
         super(Hinet, self).__init__()
 
-        self.inv1 = INV_block()
-        self.inv2 = INV_block()
-        self.inv3 = INV_block()
-        self.inv4 = INV_block()
-        self.inv5 = INV_block()
-        self.inv6 = INV_block()
-        self.inv7 = INV_block()
-        self.inv8 = INV_block()
+        # 실제 입력 채널 수(24)를 명시적으로 지정합니다.
+        # (3채널 * 4 DWT sub-bands) * 2 (cover + secret) = 24
+        self.inv1 = INV_block(channel_in=24)
+        self.inv2 = INV_block(channel_in=24)
+        self.inv3 = INV_block(channel_in=24)
+        self.inv4 = INV_block(channel_in=24)
+        self.inv5 = INV_block(channel_in=24)
+        self.inv6 = INV_block(channel_in=24)
+        self.inv7 = INV_block(channel_in=24)
+        self.inv8 = INV_block(channel_in=24)
 
-        self.inv9 = INV_block()
-        self.inv10 = INV_block()
-        self.inv11 = INV_block()
-        self.inv12 = INV_block()
-        self.inv13 = INV_block()
-        self.inv14 = INV_block()
-        self.inv15 = INV_block()
-        self.inv16 = INV_block()
+        self.inv9 = INV_block(channel_in=24)
+        self.inv10 = INV_block(channel_in=24)
+        self.inv11 = INV_block(channel_in=24)
+        self.inv12 = INV_block(channel_in=24)
+        self.inv13 = INV_block(channel_in=24)
+        self.inv14 = INV_block(channel_in=24)
+        self.inv15 = INV_block(channel_in=24)
+        self.inv16 = INV_block(channel_in=24)
 
     def forward(self, x, rev=False):
 
@@ -66,5 +68,3 @@ class Hinet(nn.Module):
             out = self.inv1(out, rev=True)
 
         return out
-
-
