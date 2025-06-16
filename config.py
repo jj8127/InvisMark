@@ -58,7 +58,7 @@ IMAGE_PATH_steg = IMAGE_PATH + 'steg/'
 IMAGE_PATH_secret_rev = IMAGE_PATH + 'secret-rev/'
 
 # Load:
-suffix = 'hinet_qat_quantized2.pt'
+suffix = 'model.pt'
 init_model_path = MODEL_PATH + suffix
 tain_next = False
 trained_epoch = 0

@@ -1,39 +1,31 @@
-# train_QAT_Lfeq.py (QAT + TensorBoardX & viz)
-
-import torch
-import torch.optim
-import torch.quantization
-import torch.nn as nn
-from torch.utils.data import DataLoader
-import torchvision.transforms as T
 import os
 import random
-import numpy as np
 import math
-from tqdm import tqdm
+import numpy as np
+import torch
+import torch.nn as nn
+import torch.optim
+import torch.quantization
+from torch.utils.data import DataLoader
+import torchvision.transforms as T
+from tensorboardX import SummaryWriter
+import matplotlib.pyplot as plt
 
 import config as c
 from datasets import Hinet_Dataset
 from model_QAT import Model
 from modules.Unet_common import DWT, IWT
-
-# TensorBoardX 및 viz 로깅
-from tensorboardX import SummaryWriter
 import viz
 
 # 재현성을 위한 시드 설정
-seed = 100
-torch.manual_seed(seed)
-torch.cuda.manual_seed(seed)
-random.seed(seed)
-np.random.seed(seed)
+def set_seed(seed=100):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
 
-
+# PSNR 계산 함수
 def computePSNR(origin, pred):
-    """
-    PSNR(Peak Signal-to-Noise Ratio) 계산 함수
-    origin, pred: NumPy 배열, [H, W, C]
-    """
     origin = origin.astype(np.float32)
     pred = pred.astype(np.float32)
     mse = np.mean((origin - pred) ** 2)
@@ -41,8 +33,46 @@ def computePSNR(origin, pred):
         return 100.0
     return 10 * math.log10((255.0 ** 2) / mse)
 
+# 메트릭 시각화 함수
+def plot_metrics(steps, losses, psnr_c, psnr_s, save_dir):
+    os.makedirs(save_dir, exist_ok=True)
+
+    # Training Loss
+    plt.figure(figsize=(10, 5))
+    plt.plot(steps, losses, marker='.', linestyle='-')
+    plt.title('Training Loss over Steps')
+    plt.xlabel('Step')
+    plt.ylabel('Loss')
+    plt.grid(True)
+    plt.tight_layout()
+    plt.savefig(os.path.join(save_dir, 'training_loss.png'))
+    plt.close()
+
+    # PSNR_C
+    plt.figure(figsize=(10, 5))
+    plt.plot(steps, psnr_c, marker='.', linestyle='-')
+    plt.title('PSNR_C over Steps')
+    plt.xlabel('Step')
+    plt.ylabel('PSNR (Cover)')
+    plt.grid(True)
+    plt.tight_layout()
+    plt.savefig(os.path.join(save_dir, 'training_psnr_c.png'))
+    plt.close()
+
+    # PSNR_S
+    plt.figure(figsize=(10, 5))
+    plt.plot(steps, psnr_s, marker='.', linestyle='-')
+    plt.title('PSNR_S over Steps')
+    plt.xlabel('Step')
+    plt.ylabel('PSNR (Secret)')
+    plt.grid(True)
+    plt.tight_layout()
+    plt.savefig(os.path.join(save_dir, 'training_psnr_s.png'))
+    plt.close()
+
 
 def main_qat():
+    set_seed(c.seed if hasattr(c, 'seed') else 100)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 
@@ -67,9 +97,9 @@ def main_qat():
 
     # 모델 불러오기 및 QAT 설정
     net = Model(c.init_model_path)
-    net.to(device)  # 모델을 먼저 GPU로 올립니다
+    net.to(device)
     net.qconfig = torch.quantization.get_default_qat_qconfig('fbgemm')
-    net.train()  # QAT 준비 전 반드시 train() 모드로 설정
+    net.train()
     torch.quantization.prepare_qat(net, inplace=True)
     print("Model prepared for QAT.")
 
@@ -79,28 +109,21 @@ def main_qat():
     )
     loss_fn = nn.L1Loss().to(device)
 
-    # ===== 코드 수정 부분 시작 =====
     # TensorBoardX writer 초기화
-    # 스크립트가 위치한 디렉토리를 기준으로 'runs' 폴더 경로를 설정합니다.
-    try:
-        # __file__은 현재 스크립트 파일의 경로를 나타냅니다.
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-    except NameError:
-        # Colab/Jupyter 같은 환경에서는 __file__이 정의되지 않으므로 현재 작업 디렉토리를 사용합니다.
-        script_dir = os.getcwd()
-    
-    log_dir_base = os.path.join(script_dir, 'runs')
-    writer = SummaryWriter(logdir=log_dir_base, comment='hinet_qat_Lfreq')
-    # ===== 코드 수정 부분 끝 =====
+    script_dir = os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else os.getcwd()
+    log_dir = os.path.join(script_dir, 'runs')
+    writer = SummaryWriter(logdir=log_dir, comment='hinet_qat_Lfreq')
 
-    # QAT 미세조정
-    print("Starting QAT fine-tuning...")
+    # 메트릭 저장용 리스트
+    steps, losses, psnr_c_list, psnr_s_list = [], [], [], []
+
     qat_epochs = getattr(c, 'qat_epochs', 10)
+    global_step = 0
+
+    print("Starting QAT fine-tuning...")
     for epoch in range(qat_epochs):
         net.train()
-        for batch_idx, data in enumerate(
-            tqdm(trainloader, desc=f"QAT Epoch {epoch+1}/{qat_epochs}")
-        ):
+        for batch_idx, data in enumerate(trainloader):
             cover = data['cover_image'].to(device)
             secret = data['secret_image'].to(device)
             optim.zero_grad()
@@ -112,7 +135,6 @@ def main_qat():
             output_dwt = net(input_dwt)
 
             # Reverse pass
-            # DWT 결과는 3채널 * 4 sub-bands = 12채널
             output_steg_dwt = output_dwt[:, :12, :, :]
             rev_output = net(output_dwt, rev=True)
             output_secret_dwt = rev_output[:, 12:, :, :]
@@ -123,52 +145,51 @@ def main_qat():
             # 손실 계산
             guide_loss = loss_fn(steg_img, cover)
             recon_loss = loss_fn(secret_rev, secret)
-            cover_low = cover_dwt[:, :3, :, :]
-            steg_low = output_steg_dwt[:, :3, :, :]
-            low_freq_loss = loss_fn(steg_low, cover_low)
+            low_freq_loss = loss_fn(output_steg_dwt[:, :3, :, :], cover_dwt[:, :3, :, :])
             total_loss = (
                 c.lamda_reconstruction * recon_loss +
                 c.lamda_guide * guide_loss +
                 c.lamda_low_frequency * low_freq_loss
             )
 
-            # Backprop
             total_loss.backward()
             optim.step()
 
-            # 전역 스텝 계산
-            global_step = epoch * len(trainloader) + batch_idx
-            writer.add_scalar('Train/Loss', total_loss.item(), global_step)
+            # 로그 업데이트
+            psnr_c = computePSNR((cover.detach().cpu().numpy().transpose(0,2,3,1)[0] * 255),
+                                  (steg_img.detach().cpu().numpy().transpose(0,2,3,1)[0] * 255))
+            psnr_s = computePSNR((secret.detach().cpu().numpy().transpose(0,2,3,1)[0] * 255),
+                                  (secret_rev.detach().cpu().numpy().transpose(0,2,3,1)[0] * 255))
 
-            # 배치의 첫 번째 샘플로 PSNR 계산
-            with torch.no_grad():
-                steg_np = steg_img[0].detach().cpu().numpy().transpose(1,2,0) * 255.0
-                cover_np = cover[0].detach().cpu().numpy().transpose(1,2,0) * 255.0
-                secret_rev_np = secret_rev[0].detach().cpu().numpy().transpose(1,2,0) * 255.0
-                secret_np = secret[0].detach().cpu().numpy().transpose(1,2,0) * 255.0
-                psnr_c = computePSNR(cover_np, steg_np)
-                psnr_s = computePSNR(secret_np, secret_rev_np)
+            global_step += 1
+            steps.append(global_step)
+            losses.append(total_loss.item())
+            psnr_c_list.append(psnr_c)
+            psnr_s_list.append(psnr_s)
+
+            writer.add_scalar('Train/Loss', total_loss.item(), global_step)
             writer.add_scalar('Train/PSNR_C', psnr_c, global_step)
             writer.add_scalar('Train/PSNR_S', psnr_s, global_step)
-
-            # viz 실시간 시각화
             viz.show_loss([total_loss.item(), math.log10(optim.param_groups[0]['lr'])])
 
         scheduler.step()
         print(f"Epoch {epoch+1}/{qat_epochs} - Loss: {total_loss.item():.4f}")
 
-    # 모델 양자화 변환 및 저장
+    # 모델 양자화 및 저장
     print("Converting to INT8 model...")
     net.eval()
     net.to('cpu')
     quantized_model = torch.quantization.convert(net, inplace=True)
-    save_path = os.path.join(c.MODEL_PATH, 'hinet_qat_quantized.pt')
+    save_path = os.path.join(c.MODEL_PATH, 'hinet_qat_quantized2.pt')
     torch.save(quantized_model.state_dict(), save_path)
     print(f"Quantized model saved to {save_path}")
 
     writer.close()
     viz.signal_stop()
 
+    # 메트릭 플롯 저장
+    plot_metrics(steps, losses, psnr_c_list, psnr_s_list, save_dir=script_dir)
+    print(f"Metrics plots saved in {script_dir}")
 
 if __name__ == "__main__":
     main_qat()
