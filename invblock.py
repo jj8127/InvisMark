@@ -35,11 +35,12 @@ class INV_block(nn.Module):
             y3 = self.functional.add(y1, self.y(y2))
             out = self.functional.cat([y3, y2], 1)
         else:
+            # 역방향 연산 시에는 표준 뺄셈(-)을 사용합니다.
             y3, y2 = x1, x2
-            y1 = self.functional.sub(y3, self.y(y2))
-            x2_rev = self.functional.sub(y2, self.r(y1))
-            x1_rev = self.functional.sub(y1, self.f(x2_rev))
-            out = self.functional.cat([x1_rev, x2_rev], 1)
+            y1 = y3 - self.y(y2)
+            x2_rev = y2 - self.r(y1)
+            x1_rev = y1 - self.f(x2_rev)
+            out = torch.cat((x1_rev, x2_rev), 1)
         # ===== 코드 수정 끝 =====
 
         return out

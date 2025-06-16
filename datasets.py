@@ -29,9 +29,10 @@ class Hinet_Dataset(Dataset):
             image = Image.open(self.files[index]).convert('RGB')
             item = self.transform(image)
             
-            # 원본 코드와 같이 딕셔너리 형태로 반환합니다.
-            # HiNet의 기본 설정은 cover와 secret 이미지로 동일한 이미지를 사용합니다.
+            # ===== 코드 수정: 딕셔너리 키 변경 =====
+            # 훈련/테스트 스크립트에서 사용하는 'cover_image', 'secret_image'와 일치시킵니다.
             return {'cover_image': item, 'secret_image': item}
+            # ===== 코드 수정 끝 =====
 
         except:
             return self.__getitem__(index + 1)
@@ -42,7 +43,6 @@ class Hinet_Dataset(Dataset):
 
         else:
             return len(self.files)
-
 
 transform = T.Compose([
     T.RandomHorizontalFlip(),
