@@ -8,8 +8,6 @@ weight_decay = 1e-5
 init_scale = 0.01
 # config.py 파일에 추가할 내용
 
-# QAT 미세 조정을 위한 학습률 감소 시점 (에포크)
-# 예: 10 에포크 훈련 시, 5번째와 8번째 에포크가 끝나고 학습률 감소
 milestones = [5, 8]
 lamda_reconstruction = 5
 lamda_guide = 1
@@ -45,20 +43,19 @@ progress_bar = False
 
 
 # Saving checkpoints:
-#             /content/drive/MyDrive/Colab/HiNet_all/HiNet_all/HiNet/model
 MODEL_PATH = '/content/drive/MyDrive/Colab/HiNet_all/HiNet_all/HiNet/model/'
 checkpoint_on_error = True
 SAVE_freq = 50
 
 
-IMAGE_PATH = '/content/drive/MyDrive/Colab/HiNet_all/HiNet_all/HiNet/image/'
+IMAGE_PATH = '/content/InvisMark/image/'
 IMAGE_PATH_cover = IMAGE_PATH + 'cover/'
 IMAGE_PATH_secret = IMAGE_PATH + 'secret/'
 IMAGE_PATH_steg = IMAGE_PATH + 'steg/'
 IMAGE_PATH_secret_rev = IMAGE_PATH + 'secret-rev/'
 
 # Load:
-suffix = 'model.pt'
+suffix = 'hinet_qat_quantized.pt'
 init_model_path = MODEL_PATH + suffix
 tain_next = False
 trained_epoch = 0
